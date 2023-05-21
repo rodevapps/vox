@@ -1,0 +1,60 @@
+name: Master - Testing
+
+on:
+  push:
+    branches:
+      - 'main'
+
+jobs:
+
+  test:
+
+    name: Test master branch
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Test build docker image
+        run: |
+          docker build -t vox/nginx-phpfpm:$GITHUB_SHA . --no-cache --build-arg APP_VERSION=${{github.run_number}}
+          mkdir artifacts
+          docker save vox/nginx-phpfpm:$GITHUB_SHA > artifacts/docker-image.tar
+
+      - name: Temporarily save Docker image
+        uses: actions/upload-artifact@v3
+        with:
+          name: docker-artifact
+          path: artifacts
+          retention-days: 1
+
+  publish:
+    name: Publish to Docker Hub
+    runs-on: ubuntu-22.04
+    needs: [test]
+
+    - name: Retrieve saved Docker image
+        uses: actions/download-artifact@v3
+        with:
+          name: docker-artifact
+          path: artifacts
+
+    steps:
+      - name: Publish to Docker Hub
+        run: |
+          cd artifacts
+          docker load < docker-image.tar
+          docker image tag vox/nginx-phpfpm:$GITHUB_SHA vox/nginx-phpfpm:latest
+          docker image tag vox/nginx-phpfpm:$GITHUB_SHA vox/nginx-phpfpm:v1.0.${{github.run_number}}
+          docker image push vox/nginx-phpfpm:v1.0.${{github.run_number}}
+          docker image push vox/nginx-phpfpm:latest
+
+  redeploy:
+    name: Redeploy webhook call
+    runs-on: ubuntu-22.04
+    needs: [publish]
+    steps:
+      - name: Deploy docker container webhook
+        uses: joelwmale/webhook-action@master
+        env:
+          WEBHOOK_URL: ${{secrets.DEPLOY_WEBHOOK_URL}}

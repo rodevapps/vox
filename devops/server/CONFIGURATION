@@ -1,0 +1,8 @@
+sudo apt-get update
+sudo apt-get remove docker docker-engine docker.io
+sudo apt install docker.io webhook
+sudo systemctl start docker
+sudo systemctl enable docker
+
+
+webhook -hooks /my/path/to/hooks/hooks.json -verbose

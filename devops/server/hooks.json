@@ -1,0 +1,8 @@
+[
+  {
+    "id": "redeploy",
+    "execute-command": "/home/rafal/redeploy.sh",
+    "command-working-directory": "/home/rafal/containers",
+    "response-message": "Redeploying API server."
+  }
+]
